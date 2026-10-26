@@ -11,7 +11,7 @@ public final class NativeChecks extends Instrumentation {
  @Override public void onCreate(Bundle args){super.onCreate(args);this.args=args;start();}
  @Override public void onStart(){Bundle result=new Bundle();try{
   Context c=getTargetContext();String mode=args.getString("mode","native");
-  if(mode.equals("qr")){runQrChecks(c);result.putString("result","PASS: QR button opens scanner; camera preview resumes; scanner closes and reopens without crash");}else if(mode.equals("ui")){runUiChecks(c);result.putString("result","PASS: all 65 rows rendered; settings persisted; connection log dialog contains event history");}else if(mode.equals("native")){
+  if(mode.equals("updater")||mode.equals("installer")){runUpdaterChecks(c,mode.equals("installer"));result.putString("result","PASS: download progress and cancellation; launcher reopens existing activity"+(mode.equals("installer")?"; installer launched":""));}else if(mode.equals("qr")){runQrChecks(c);result.putString("result","PASS: QR button opens scanner; camera preview resumes; scanner closes and reopens without crash");}else if(mode.equals("ui")){runUiChecks(c);result.putString("result","PASS: all 65 rows rendered; settings persisted; connection log dialog contains event history");}else if(mode.equals("native")){
    if("geo".equals(args.getString("rules")))GeoAssets.ensure(c);go.Seq.setContext(c);libv2ray.Libv2ray.initCoreEnv(c.getFilesDir().getAbsolutePath(),Identity.xudpKey(Identity.hwid(c)));
    libv2ray.CoreController core=libv2ray.Libv2ray.newCoreController(new libv2ray.CoreCallbackHandler(){public long startup(){return 0;}public long shutdown(){return 0;}public long onEmitStatus(long n,String s){return 0;}});
    ParcelFileDescriptor[] pair=ParcelFileDescriptor.createSocketPair();try{
@@ -49,6 +49,15 @@ public final class NativeChecks extends Instrumentation {
 
 
  private Object field(Object target,String name)throws Exception{java.lang.reflect.Field f=target.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(target);}
+ private void runUpdaterChecks(Context c,boolean install)throws Exception{
+  new Store(c).change(d->{d.put("updateOnOpen",false);d.put("pingOnOpen",false);d.put("connectOnOpen",false);});
+  Activity main=startActivitySync(new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+  for(int i=0;i<100;i++){final boolean[] ready={false};runOnMainSync(()->{try{ready[0]=(boolean)field(main,"ready");}catch(Exception e){throw new RuntimeException(e);}});if(ready[0])break;Thread.sleep(100);}
+  runOnMainSync(()->{try{UpdateDownloadDialog progress=new UpdateDownloadDialog(main,"9.0.0");progress.report(1048576,2097152,false);String label=((android.widget.TextView)field(progress,"status")).getText().toString();if(!label.contains("50%")||!label.contains("МиБ"))throw new AssertionError("Missing download amount: "+label);progress.cancel();if(!progress.isCancelled())throw new AssertionError("Cancel did not stop download");}catch(Exception e){throw new RuntimeException(e);}});
+  Intent launch=c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());if(launch==null)throw new AssertionError("Installer cannot resolve launcher");launch.putExtra("reopen-check",true);c.startActivity(launch);Thread.sleep(700);waitForIdleSync();
+  runOnMainSync(()->{if(main.isDestroyed()||!main.getIntent().getBooleanExtra("reopen-check",false))throw new AssertionError("Launcher did not reopen existing activity");});
+  if(install){runOnMainSync(()->{c.getSharedPreferences("app_updates",0).edit().putBoolean("pending",true).commit();AppUpdater.installPending(main);});Thread.sleep(1500);}else runOnMainSync(main::finish);
+ }
  private void runQrChecks(Context c)throws Exception{
   c.getSharedPreferences("app_updates",0).edit().putLong("checked",System.currentTimeMillis()).commit();
   new Store(c).change(d->{d.put("updateOnOpen",false);d.put("pingOnOpen",false);d.put("connectOnOpen",false);});

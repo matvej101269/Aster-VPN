@@ -115,7 +115,12 @@ public partial class MainWindow : Window
             if (update == null) { if (manual) MessageBox.Show("Новых обновлений нет.", "Aster VPN"); return; }
             ShowWindow();
             if (!UpdatePrompt.Show(this, update.Version)) return;
-            var path = await AppUpdater.DownloadAsync(update);
+            string path;
+            using (var download = new UpdateDownloadWindow(this, update.Version))
+            {
+                download.Show();
+                path = await AppUpdater.DownloadAsync(update, new Progress<AppUpdater.DownloadProgress>(download.Report), download.Token);
+            }
             if (closing) return;
             // Wait for normal shutdown and tunnel cleanup before Inno checks AppMutex.
             var script = $"Wait-Process -Id {Environment.ProcessId} -ErrorAction SilentlyContinue; Start-Process -FilePath '{path.Replace("'", "''")}'";
@@ -123,7 +128,8 @@ public partial class MainWindow : Window
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("powershell.exe", "-NoProfile -NonInteractive -EncodedCommand " + encoded) { UseShellExecute = false, CreateNoWindow = true });
             RequestExit();
         }
-        catch (Exception ex) { if (manual) MessageBox.Show("Не удалось обновить клиент: " + ex.Message, "Aster VPN"); else Log("Проверка обновления клиента не удалась: " + ex.Message); }
+        catch (OperationCanceledException) { Log("Загрузка обновления отменена или истекло время ожидания."); }
+        catch (Exception ex) { MessageBox.Show("Не удалось обновить клиент: " + ex.Message, "Aster VPN"); }
         finally { checkingAppUpdate = false; CheckAppUpdateButton.IsEnabled = true; CheckAppUpdateButton.Content = "Проверить обновления"; }
     }
     private void LoadSettings()

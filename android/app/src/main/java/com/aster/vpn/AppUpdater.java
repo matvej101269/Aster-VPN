@@ -18,6 +18,8 @@ import java.util.regex.*;
 final class AppUpdater {
  private static final ExecutorService IO=Executors.newSingleThreadExecutor();
  private static boolean busy;
+ private static UpdateDownloadDialog activeDownload;
+ static void detach(Activity activity){if(activeDownload!=null&&activeDownload.activity==activity){activeDownload.cancel();activeDownload=null;}}
  private static final String BASE="https://github.com/matvej101269/Aster-VPN/releases/download/";
  static final class Update {String version,url,digest;long size;}
  static int compare(String a,String b){String[] x=a.split("\\."),y=b.split("\\.");for(int i=0;i<Math.max(x.length,y.length);i++){int c=Integer.compare(i<x.length?Integer.parseInt(x[i]):0,i<y.length?Integer.parseInt(y[i]):0);if(c!=0)return c;}return 0;}
@@ -45,21 +47,22 @@ final class AppUpdater {
    catch(Exception e){activity.runOnUiThread(()->{busy=false;if(manual&&!activity.isDestroyed())Toast.makeText(activity,"Не удалось проверить обновление: "+e.getMessage(),Toast.LENGTH_LONG).show();});}});
  }
  static void showOffer(Activity activity,Update update){new AlertDialog.Builder(activity).setTitle("Доступно обновление Aster VPN").setMessage("Доступна версия "+update.version+". Установлена версия "+BuildConfig.VERSION_NAME+". Обновить сейчас?").setNegativeButton("Позже",null).setPositiveButton("Обновить",(d,w)->download(activity,update)).show();}
- private static void download(Activity activity,Update update){if(busy)return;busy=true;Toast.makeText(activity,"Загрузка обновления…",Toast.LENGTH_LONG).show();IO.execute(()->{
+ private static void download(Activity activity,Update update){if(busy)return;busy=true;UpdateDownloadDialog progress=new UpdateDownloadDialog(activity,update.version);activeDownload=progress;IO.execute(()->{
   File target=new File(activity.getCacheDir(),"update.apk");File partial=new File(activity.getCacheDir(),"update.part");
-  try {HttpURLConnection c=connect(update.url);MessageDigest hash=MessageDigest.getInstance("SHA-256");long total=0;
-   try(InputStream in=c.getInputStream();OutputStream out=new FileOutputStream(partial)){byte[] buffer=new byte[65536];int n;while((n=in.read(buffer))!=-1){total+=n;if(total>update.size)throw new IOException("Неверный размер APK");hash.update(buffer,0,n);out.write(buffer,0,n);}}finally{c.disconnect();}
+  try {if(progress.isCancelled())throw new InterruptedIOException();HttpURLConnection c=connect(update.url);progress.connection(c);MessageDigest hash=MessageDigest.getInstance("SHA-256");long total=0,lastReport=0;
+   try(InputStream in=c.getInputStream();OutputStream out=new FileOutputStream(partial)){byte[] buffer=new byte[65536];int n;while((n=in.read(buffer))!=-1){if(progress.isCancelled())throw new InterruptedIOException();total+=n;if(total>update.size)throw new IOException("Неверный размер APK");hash.update(buffer,0,n);out.write(buffer,0,n);long now=android.os.SystemClock.elapsedRealtime();if(now-lastReport>=100||total==update.size){progress.report(total,update.size,false);lastReport=now;}}}finally{c.disconnect();}
+   if(progress.isCancelled())throw new InterruptedIOException();progress.report(total,update.size,true);
    StringBuilder hex=new StringBuilder();for(byte b:hash.digest())hex.append(String.format(java.util.Locale.ROOT,"%02x",b&255));if(total!=update.size||!hex.toString().equals(update.digest))throw new IOException("SHA-256 APK не совпадает");
    PackageManager pm=activity.getPackageManager();int flags=android.os.Build.VERSION.SDK_INT>=28?PackageManager.GET_SIGNING_CERTIFICATES:PackageManager.GET_SIGNATURES;PackageInfo apk=pm.getPackageArchiveInfo(partial.getPath(),flags),installed=pm.getPackageInfo(activity.getPackageName(),flags);
    if(apk==null||!activity.getPackageName().equals(apk.packageName)||compare(apk.versionName,BuildConfig.VERSION_NAME)<=0||!update.version.equals(apk.versionName)||apk.versionCode<=BuildConfig.VERSION_CODE)throw new IOException("Неверный пакет или версия APK");
    Signature[] a=android.os.Build.VERSION.SDK_INT>=28?apk.signingInfo.getApkContentsSigners():apk.signatures,b=android.os.Build.VERSION.SDK_INT>=28?installed.signingInfo.getApkContentsSigners():installed.signatures;
    if(a==null||b==null||a.length==0||!Arrays.equals(a,b))throw new IOException("Подпись APK не совпадает");
    if(target.exists()&&!target.delete())throw new IOException("Не удалось удалить старое обновление");if(!partial.renameTo(target))throw new IOException("Не удалось сохранить обновление");
-   activity.runOnUiThread(()->{busy=false;if(activity.isDestroyed()||activity.isFinishing())return;activity.getSharedPreferences("app_updates",0).edit().putBoolean("pending",true).apply();installPending(activity);});
-  }catch(Exception e){partial.delete();activity.runOnUiThread(()->{busy=false;if(!activity.isDestroyed())Toast.makeText(activity,"Ошибка обновления: "+e.getMessage(),Toast.LENGTH_LONG).show();});}
+   activity.runOnUiThread(()->{busy=false;progress.finish();if(activeDownload==progress)activeDownload=null;if(progress.isCancelled()||activity.isDestroyed()||activity.isFinishing())return;activity.getSharedPreferences("app_updates",0).edit().putBoolean("pending",true).apply();installPending(activity);});
+  }catch(Exception e){partial.delete();activity.runOnUiThread(()->{busy=false;progress.finish();if(activeDownload==progress)activeDownload=null;if(!progress.isCancelled()&&!activity.isDestroyed())Toast.makeText(activity,"Ошибка обновления: "+e.getMessage(),Toast.LENGTH_LONG).show();});}
  });}
  static void installPending(Activity a){android.content.SharedPreferences prefs=a.getSharedPreferences("app_updates",0);if(!prefs.getBoolean("pending",false))return;
   if(!a.getPackageManager().canRequestPackageInstalls()){prefs.edit().putBoolean("pending",false).apply();new AlertDialog.Builder(a).setTitle("Разрешение на установку").setMessage("Разрешите Aster VPN устанавливать обновления. Затем повторите проверку обновлений.").setPositiveButton("Настройки",(d,w)->a.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+a.getPackageName())))).setNegativeButton("Позже",null).show();return;}
-  prefs.edit().putBoolean("pending",false).apply();try{a.startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse("content://"+a.getPackageName()+".updates/update.apk"),"application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));}catch(Exception e){Toast.makeText(a,"Установщик недоступен: "+e.getMessage(),Toast.LENGTH_LONG).show();}
+  prefs.edit().putBoolean("pending",false).apply();try{Uri uri=Uri.parse("content://"+a.getPackageName()+".updates/update.apk");Intent installer=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_ACTIVITY_NEW_TASK);installer.setClipData(ClipData.newRawUri("Aster VPN update",uri));a.startActivity(installer);}catch(Exception e){Toast.makeText(a,"Установщик недоступен: "+e.getMessage(),Toast.LENGTH_LONG).show();}
  }
 }

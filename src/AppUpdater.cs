@@ -38,28 +38,34 @@ public static class AppUpdater
         }
         return newest;
     }
-    public static async Task<string> DownloadAsync(Update update)
+    public sealed record DownloadProgress(long Received, long Total, bool Verifying = false);
+    public static async Task<string> DownloadAsync(Update update, IProgress<DownloadProgress>? progress = null, CancellationToken cancellation = default)
     {
         var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AsterVPN", "updates", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, update.Name);
         try
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(15));
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+            timeout.CancelAfter(TimeSpan.FromMinutes(15));
+            progress?.Report(new(0, update.Size));
             using var response = await Client.GetAsync(update.Url, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             response.EnsureSuccessStatusCode();
             await using (var input = await response.Content.ReadAsStreamAsync(timeout.Token))
             await using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 var buffer = new byte[81920]; long total = 0; int count;
+                var clock = System.Diagnostics.Stopwatch.StartNew();
                 while ((count = await input.ReadAsync(buffer, timeout.Token)) > 0)
                 {
                     total += count;
                     if (total > update.Size) throw new IOException("Размер обновления не совпадает.");
                     await output.WriteAsync(buffer.AsMemory(0, count), timeout.Token);
+                    if (clock.ElapsedMilliseconds >= 100 || total == update.Size) { progress?.Report(new(total, update.Size)); clock.Restart(); }
                 }
                 if (total != update.Size) throw new IOException("Обновление загружено не полностью.");
             }
+            progress?.Report(new(update.Size, update.Size, true));
             await using var file = File.OpenRead(path);
             var hash = Convert.ToHexString(await SHA256.HashDataAsync(file, timeout.Token));
             if (!hash.Equals(update.Digest, StringComparison.OrdinalIgnoreCase)) throw new IOException("SHA-256 обновления не совпадает.");

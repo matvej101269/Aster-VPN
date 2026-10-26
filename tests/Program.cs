@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Nodes;
 
+if (args.Contains("--updates-only")) { await UpdateDownloadChecks.RunAsync(); return; }
+
 if (RecoveryPolicy.RetryDelaySeconds(1) != 15 || RecoveryPolicy.RetryDelaySeconds(2) != 30 ||
     RecoveryPolicy.RetryDelaySeconds(6) != 300 || RecoveryPolicy.RetryDelaySeconds(1000000) != 300)
     throw new Exception("Recovery backoff must stay bounded during a prolonged outage.");
