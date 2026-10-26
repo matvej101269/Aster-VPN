@@ -22,3 +22,9 @@ https://github.com/journeyapps/zxing-android-embedded
 https://github.com/zxing/zxing
 Copyright ZXing authors and Journey Mobile. Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
 Used for on-device QR decoding. Camera frames are not saved or uploaded.
+
+AndroidX Core 1.13.1 and its AndroidX dependencies
+https://developer.android.com/jetpack/androidx/releases/core
+Copyright The Android Open Source Project. Apache License 2.0:
+https://www.apache.org/licenses/LICENSE-2.0
+Provides the runtime permission helpers used by the QR scanner.
