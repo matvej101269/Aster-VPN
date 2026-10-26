@@ -4,7 +4,7 @@
     <UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest><AssemblyName>AsterVPN</AssemblyName>
-    <Version>1.0.5</Version>
+    <Version>1.0.6</Version>
     <ApplicationIcon>Assets/aster.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup><Resource Include="Assets/aster.ico"/><Resource Include="Assets/aster.png"/></ItemGroup>

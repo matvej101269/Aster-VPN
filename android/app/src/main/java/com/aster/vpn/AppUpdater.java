@@ -35,10 +35,16 @@ final class AppUpdater {
   }return best;
  }
  static void check(Activity activity,boolean manual){
-  if(busy)return;android.content.SharedPreferences prefs=activity.getSharedPreferences("app_updates",0);long now=System.currentTimeMillis();if(!manual&&now-prefs.getLong("checked",0)<21600000)return;prefs.edit().putLong("checked",now).apply();busy=true;
-  IO.execute(()->{try{HttpURLConnection c=connect("https://api.github.com/repos/matvej101269/Aster-VPN/releases?per_page=100");String body;try(InputStream in=c.getInputStream()){body=Subscriptions.read(in);}finally{c.disconnect();}Update update=select(new JSONArray(body));activity.runOnUiThread(()->{busy=false;if(activity.isDestroyed()||activity.isFinishing())return;if(update==null){if(manual)Toast.makeText(activity,"Новых обновлений нет",Toast.LENGTH_LONG).show();return;}new AlertDialog.Builder(activity).setTitle("Обновление Aster VPN").setMessage("Доступна версия "+update.version+". Скачать и установить?").setNegativeButton("Позже",null).setPositiveButton("Обновить",(d,w)->download(activity,update)).show();});}
+  check(activity,manual,false);
+ }
+ static void checkAtStartup(Activity activity){check(activity,false,true);}
+ static boolean shouldCheck(boolean manual,boolean startup,long now,long checked){return manual||startup||now-checked>=21600000;}
+ private static void check(Activity activity,boolean manual,boolean startup){
+  if(busy)return;android.content.SharedPreferences prefs=activity.getSharedPreferences("app_updates",0);long now=System.currentTimeMillis();if(!shouldCheck(manual,startup,now,prefs.getLong("checked",0)))return;prefs.edit().putLong("checked",now).apply();busy=true;
+  IO.execute(()->{try{HttpURLConnection c=connect("https://api.github.com/repos/matvej101269/Aster-VPN/releases?per_page=100");String body;try(InputStream in=c.getInputStream()){body=Subscriptions.read(in);}finally{c.disconnect();}Update update=select(new JSONArray(body));activity.runOnUiThread(()->{busy=false;if(activity.isDestroyed()||activity.isFinishing())return;if(update==null){if(manual)Toast.makeText(activity,"Новых обновлений нет",Toast.LENGTH_LONG).show();return;}if(activity instanceof MainActivity)((MainActivity)activity).offerAppUpdate(update);else showOffer(activity,update);});}
    catch(Exception e){activity.runOnUiThread(()->{busy=false;if(manual&&!activity.isDestroyed())Toast.makeText(activity,"Не удалось проверить обновление: "+e.getMessage(),Toast.LENGTH_LONG).show();});}});
  }
+ static void showOffer(Activity activity,Update update){new AlertDialog.Builder(activity).setTitle("Доступно обновление Aster VPN").setMessage("Доступна версия "+update.version+". Установлена версия "+BuildConfig.VERSION_NAME+". Обновить сейчас?").setNegativeButton("Позже",null).setPositiveButton("Обновить",(d,w)->download(activity,update)).show();}
  private static void download(Activity activity,Update update){if(busy)return;busy=true;Toast.makeText(activity,"Загрузка обновления…",Toast.LENGTH_LONG).show();IO.execute(()->{
   File target=new File(activity.getCacheDir(),"update.apk");File partial=new File(activity.getCacheDir(),"update.part");
   try {HttpURLConnection c=connect(update.url);MessageDigest hash=MessageDigest.getInstance("SHA-256");long total=0;

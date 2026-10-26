@@ -113,7 +113,8 @@ public partial class MainWindow : Window
             var update = await AppUpdater.CheckAsync();
             if (closing) return;
             if (update == null) { if (manual) MessageBox.Show("Новых обновлений нет.", "Aster VPN"); return; }
-            if (MessageBox.Show($"Доступна версия {update.Version}. Скачать и установить? VPN будет отключён перед установкой.", "Обновление Aster VPN", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            ShowWindow();
+            if (!UpdatePrompt.Show(this, update.Version)) return;
             var path = await AppUpdater.DownloadAsync(update);
             if (closing) return;
             // Wait for normal shutdown and tunnel cleanup before Inno checks AppMutex.
