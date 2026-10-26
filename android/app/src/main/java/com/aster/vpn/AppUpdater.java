@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.regex.*;
 
 final class AppUpdater {
- private static final ExecutorService IO=Executors.newSingleThreadExecutor();
+ private static final ExecutorService IO=IdleWorkers.single("aster-updates");
  private static boolean busy;
  private static UpdateDownloadDialog activeDownload;
  static void detach(Activity activity){if(activeDownload!=null&&activeDownload.activity==activity){activeDownload.cancel();activeDownload=null;}}

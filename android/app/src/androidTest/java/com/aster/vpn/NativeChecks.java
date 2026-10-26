@@ -11,7 +11,7 @@ public final class NativeChecks extends Instrumentation {
  @Override public void onCreate(Bundle args){super.onCreate(args);this.args=args;start();}
  @Override public void onStart(){Bundle result=new Bundle();try{
   Context c=getTargetContext();String mode=args.getString("mode","native");
-  if(mode.equals("updater")||mode.equals("installer")){runUpdaterChecks(c,mode.equals("installer"));result.putString("result","PASS: download progress and cancellation; launcher reopens existing activity"+(mode.equals("installer")?"; installer launched":""));}else if(mode.equals("qr")){runQrChecks(c);result.putString("result","PASS: QR button opens scanner; camera preview resumes; scanner closes and reopens without crash");}else if(mode.equals("ui")){runUiChecks(c);result.putString("result","PASS: all 65 rows rendered; settings persisted; connection log dialog contains event history");}else if(mode.equals("native")){
+  if(mode.equals("memory")){runMemoryChecks(c,result);}else if(mode.equals("updater")||mode.equals("installer")){runUpdaterChecks(c,mode.equals("installer"));result.putString("result","PASS: download progress and cancellation; launcher reopens existing activity"+(mode.equals("installer")?"; installer launched":""));}else if(mode.equals("qr")){runQrChecks(c);result.putString("result","PASS: QR button opens scanner; camera preview resumes; scanner closes and reopens without crash");}else if(mode.equals("ui")){runUiChecks(c);result.putString("result","PASS: all 65 rows rendered; settings persisted; connection log dialog contains event history");}else if(mode.equals("native")){
    if("geo".equals(args.getString("rules")))GeoAssets.ensure(c);go.Seq.setContext(c);libv2ray.Libv2ray.initCoreEnv(c.getFilesDir().getAbsolutePath(),Identity.xudpKey(Identity.hwid(c)));
    libv2ray.CoreController core=libv2ray.Libv2ray.newCoreController(new libv2ray.CoreCallbackHandler(){public long startup(){return 0;}public long shutdown(){return 0;}public long onEmitStatus(long n,String s){return 0;}});
    ParcelFileDescriptor[] pair=ParcelFileDescriptor.createSocketPair();try{
@@ -49,6 +49,27 @@ public final class NativeChecks extends Instrumentation {
 
 
  private Object field(Object target,String name)throws Exception{java.lang.reflect.Field f=target.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(target);}
+ private void runMemoryChecks(Context c,Bundle result)throws Exception{
+  final int count=500;JSONArray profiles=new JSONArray();for(int i=0;i<count;i++)profiles.put(new JSONObject().put("id","memory-"+i).put("name","Memory test server "+i).put("protocol","vless").put("outbound",new JSONObject().put("protocol","vless")));
+  new Store(c).change(d->{d.put("subscriptions",new JSONArray().put(new JSONObject().put("id","memory").put("name","Memory checks").put("url","").put("servers",profiles)));d.put("selected","memory-499");d.put("updateOnOpen",false);d.put("pingOnOpen",false);d.put("connectOnOpen",false);});
+  c.getSharedPreferences("MainActivity",0).edit().putStringSet("collapsed",Collections.singleton("memory")).putBoolean("tileRequested",true).commit();
+  Activity main=startActivitySync(new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+  for(int i=0;i<100;i++){final boolean[] ready={false};runOnMainSync(()->{try{ready[0]=(boolean)field(main,"ready");}catch(Exception e){throw new RuntimeException(e);}});if(ready[0])break;Thread.sleep(100);}
+  Thread.sleep(1000);waitForIdleSync();boolean baseline="true".equals(args.getString("baseline"));final int[] rows={-1};
+  runOnMainSync(()->{try{if(!((Set<?>)field(main,"collapsed")).contains("memory"))throw new AssertionError("Test group was not collapsed");rows[0]=((List<?>)field(main,"serverRows")).size();}catch(Exception e){throw new RuntimeException(e);}});
+  result.putInt("collapsed_rows",rows[0]);if(rows[0]!=(baseline?count:0))throw new AssertionError("Unexpected collapsed rows: "+rows[0]);
+  // GC is confined to instrumentation to compare retained objects; production never forces GC.
+  Runtime.getRuntime().gc();Thread.sleep(300);android.os.Debug.MemoryInfo memory=new android.os.Debug.MemoryInfo();android.os.Debug.getMemoryInfo(memory);result.putInt("collapsed_pss_kib",memory.getTotalPss());result.putLong("collapsed_java_heap_kib",(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())/1024);
+  for(int cycle=0;cycle<3;cycle++){
+   runOnMainSync(()->clickLabel(main,"Memory checks"));Thread.sleep(350);waitForIdleSync();
+   runOnMainSync(()->{try{if(((List<?>)field(main,"serverRows")).size()!=count)throw new AssertionError("Expanded list lost servers");if(!((JSONObject)field(main,"uiData")).getString("selected").equals("memory-499"))throw new AssertionError("Selection lost");}catch(Exception e){throw new RuntimeException(e);}});
+   runOnMainSync(()->clickLabel(main,"Memory checks"));Thread.sleep(350);waitForIdleSync();
+   runOnMainSync(()->{try{if(((List<?>)field(main,"serverRows")).size()!=(baseline?count:0))throw new AssertionError("Collapsed rows not released");}catch(Exception e){throw new RuntimeException(e);}});
+  }
+  if(!baseline){Thread.sleep(16000);java.util.concurrent.ExecutorService io=(java.util.concurrent.ExecutorService)field(main,"io");if(((java.util.concurrent.ThreadPoolExecutor)io).getPoolSize()!=0)throw new AssertionError("Idle I/O thread was retained");java.util.concurrent.CountDownLatch done=new java.util.concurrent.CountDownLatch(1);io.execute(done::countDown);if(!done.await(2,java.util.concurrent.TimeUnit.SECONDS))throw new AssertionError("Idle worker did not restart");}
+  result.putString("result","PASS: 500 servers retained; collapse/expand repeated; selection preserved"+(baseline?" (baseline)":"; hidden rows released; idle worker releases and restarts"));runOnMainSync(main::finish);
+ }
+ private void clickLabel(Activity activity,String text){android.view.View label=findText(activity.getWindow().getDecorView(),text);if(label==null)throw new AssertionError("Missing label: "+text);while(!label.isClickable()&&label.getParent() instanceof android.view.View)label=(android.view.View)label.getParent();if(!label.performClick())throw new AssertionError("Label is not clickable: "+text);}
  private void runUpdaterChecks(Context c,boolean install)throws Exception{
   new Store(c).change(d->{d.put("updateOnOpen",false);d.put("pingOnOpen",false);d.put("connectOnOpen",false);});
   Activity main=startActivitySync(new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
@@ -78,15 +99,16 @@ public final class NativeChecks extends Instrumentation {
  private void runUiChecks(Context c)throws Exception{
   JSONArray profiles=new JSONArray();for(int i=0;i<65;i++)profiles.put(new JSONObject().put("id","ui-"+i).put("name","Test server "+i).put("protocol","vless").put("outbound",new JSONObject().put("protocol","vless").put("settings",new JSONObject().put("vnext",new JSONArray().put(new JSONObject().put("address","127.0.0.1").put("port",19000+i))))));
   new Store(c).change(d->{d.put("subscriptions",new JSONArray().put(new JSONObject().put("id","ui").put("name","UI checks").put("url","").put("servers",profiles)));d.put("selected","ui-0");d.put("updateOnOpen",false);d.put("pingOnOpen",false);d.put("connectOnOpen",false);});
-  c.getSharedPreferences("com.aster.vpn.MainActivity",0).edit().clear().commit();
+  c.getSharedPreferences("MainActivity",0).edit().clear().putBoolean("tileRequested",true).commit();
   Activity activity=startActivitySync(new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
   for(int i=0;i<100;i++){final boolean[] ready={false};runOnMainSync(()->{try{ready[0]=(boolean)field(activity,"ready");}catch(Exception e){throw new RuntimeException(e);}});if(ready[0])break;Thread.sleep(100);}
+  Thread.sleep(500);waitForIdleSync();
   runOnMainSync(()->{try{if(((java.util.List<?>)field(activity,"serverRows")).size()!=65)throw new AssertionError("Expected all 65 server rows");call(activity,"navigate",new Class<?>[]{String.class},"Настройки");android.view.View root=activity.getWindow().getDecorView();for(String label:new String[]{"Обновлять при открытии","Пинговать при открытии","Подключаться при открытии"}){android.view.View control=findText(root,label);if(!(control instanceof android.widget.Switch))throw new AssertionError("Missing switch: "+label);((android.widget.Switch)control).setChecked(true);}}catch(Exception e){throw new RuntimeException(e);}});
   for(int i=0;i<100;i++){JSONObject saved=new Store(c).read();if(saved.optBoolean("updateOnOpen")&&saved.optBoolean("pingOnOpen")&&saved.optBoolean("connectOnOpen"))break;Thread.sleep(50);}
   JSONObject saved=new Store(c).read();if(!saved.optBoolean("updateOnOpen")||!saved.optBoolean("pingOnOpen")||!saved.optBoolean("connectOnOpen"))throw new AssertionError("Opening preferences were not persisted");
   ConnectionLog.add(c,"UI event history check");
   runOnMainSync(()->{android.view.View label=findText(activity.getWindow().getDecorView(),"Журнал подключения");if(label==null)throw new AssertionError("Missing log row");android.view.View clickable=label;while(!clickable.isClickable()&&clickable.getParent() instanceof android.view.View)clickable=(android.view.View)clickable.getParent();if(!clickable.performClick())throw new AssertionError("Log row does not respond");});
-  waitForIdleSync();android.view.accessibility.AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();if(root==null||root.findAccessibilityNodeInfosByText("UI event history check").isEmpty())throw new AssertionError("Log dialog did not show saved history");
+  boolean foundLog=false;for(int attempt=0;attempt<20;attempt++){waitForIdleSync();android.view.accessibility.AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();if(root!=null&&!root.findAccessibilityNodeInfosByText("UI event history check").isEmpty()){foundLog=true;break;}Thread.sleep(100);}if(!foundLog)throw new AssertionError("Log dialog did not show saved history");
   runOnMainSync(activity::finish);
  }
 }
