@@ -1,0 +1,24 @@
+Aster VPN for Android
+
+Xray-core and AndroidLibXrayLite v26.10.21
+https://github.com/XTLS/Xray-core
+https://github.com/2dust/AndroidLibXrayLite/tree/v26.10.21
+Xray-core: Mozilla Public License 2.0 (MPL-2.0). AndroidLibXrayLite wrapper: GNU LGPL version 3. The prebuilt unmodified libv2ray.aar is from the upstream release. The corresponding wrapper source and dependency lockfile are included with this project in android/upstream/AndroidLibXrayLite-26.10.21. You may rebuild and replace the AAR in this project's app/libs directory, then build and sign your own APK. No signature check prevents replacement in a rebuilt application.
+
+AmneziaWG Go v3.1.20260828 and gVisor netstack
+https://github.com/amnezia-vpn/amneziawg-go/tree/v3.1.20260828
+The native libasterawg.so is built from android/native/awgbridge and its pinned go.mod/go.sum, using the official Go backend. MIT / Apache-2.0 upstream licenses apply. The older libwg-go.so is not packaged in this version. Sources and build script are included with the project.
+
+GeoIP database
+https://github.com/Loyalsoldier/v2ray-rules-dat
+https://github.com/Loyalsoldier/geoip
+geoip.dat is the unmodified data snapshot bundled with AndroidLibXrayLite 26.10.21 (18,534,419 bytes). Data projects use GPL-3.0; consult upstream for source datasets and attribution.
+
+No provider subscriptions, credentials or device identifiers are bundled.
+
+
+ZXing Android Embedded 4.3.0 and ZXing Core 3.5.3
+https://github.com/journeyapps/zxing-android-embedded
+https://github.com/zxing/zxing
+Copyright ZXing authors and Journey Mobile. Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
+Used for on-device QR decoding. Camera frames are not saved or uploaded.

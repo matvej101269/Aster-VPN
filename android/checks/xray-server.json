@@ -1,0 +1,87 @@
+{
+  "log": {
+    "loglevel": "info",
+    "access": "android/checks/xray-access.log"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 17901,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "f1f1408b-959e-4c09-bb5b-981c8ba33101"
+          }
+        ],
+        "decryption": "none"
+      }
+    },
+    {
+      "listen": "127.0.0.1",
+      "port": 17904,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "f1f1408b-959e-4c09-bb5b-981c8ba33101"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "xhttp",
+        "xhttpSettings": {
+          "path": "/aster-test"
+        }
+      }
+    },
+    {
+      "listen": "127.0.0.1",
+      "settings": {
+        "udp": true,
+        "auth": "noauth"
+      },
+      "port": 17905,
+      "protocol": "socks"
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "settings": {
+        "redirect": "127.0.0.1:17903",
+        "finalRules": [
+          {
+            "ip": [
+              "127.0.0.1/32",
+              "198.18.0.1/32",
+              "95.163.0.1/32"
+            ],
+            "network": "tcp,udp",
+            "port": "17903",
+            "action": "allow"
+          }
+        ]
+      }
+    },
+    {
+      "tag": "dns-upstream",
+      "protocol": "freedom"
+    }
+  ],
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "ip": [
+          "1.1.1.1/32",
+          "8.8.8.8/32"
+        ],
+        "port": "443",
+        "network": "tcp",
+        "outboundTag": "dns-upstream"
+      }
+    ]
+  }
+}

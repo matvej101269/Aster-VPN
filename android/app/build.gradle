@@ -1,0 +1,17 @@
+plugins { id 'com.android.application' }
+def signing = new Properties()
+def signingFile = rootProject.file('signing/release.properties')
+if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
+android {
+    namespace 'com.aster.vpn'
+    compileSdk 35
+    defaultConfig { applicationId 'com.aster.vpn'; minSdk 26; targetSdk 35; versionCode 10013; versionName '1.0.13'; ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' } }
+    buildFeatures { buildConfig true }
+    defaultConfig { testInstrumentationRunner 'com.aster.vpn.NativeChecks' }
+    signingConfigs { release { if (signingFile.exists()) { storeFile rootProject.file('signing/aster-release.p12'); storePassword signing['storePassword']; keyAlias signing['keyAlias']; keyPassword signing['storePassword'] } } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    buildTypes { release { minifyEnabled false; if (signingFile.exists()) signingConfig signingConfigs.release } }
+    packaging { jniLibs { useLegacyPackaging true; excludes += ['**/libwg-go.so'] } }
+}
+dependencies { implementation 'com.journeyapps:zxing-android-embedded:4.3.0'; implementation 'com.google.zxing:core:3.5.3'; implementation files('libs/libv2ray.aar'); testImplementation 'junit:junit:4.13.2'; testImplementation 'org.json:json:20240303' }
+

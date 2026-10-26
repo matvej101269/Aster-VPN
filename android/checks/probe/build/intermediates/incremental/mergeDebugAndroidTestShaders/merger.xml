@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merger version="3"><dataSet config="androidTest" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\androidTest\shaders"/></dataSet><dataSet config="androidTestDebug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\androidTestDebug\shaders"/></dataSet></merger>

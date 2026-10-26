@@ -1,0 +1,7 @@
+package com.aster.vpn;
+import java.net.*;
+import org.json.*;
+public final class LatencyProbe {
+ public static final class Result {public final long ms;public final String kind;public Result(long ms,String kind){this.ms=ms;this.kind=kind;}}
+ public static Result measure(JSONObject profile)throws Exception{boolean awg=profile.optString("protocol").equals("amneziawg");String host;int port;if(awg){host="";port=0;for(String line:profile.getString("config").split("\\r?\\n")){String[] p=line.split("=",2);if(p.length==2&&p[0].trim().equalsIgnoreCase("Endpoint")){URI u=new URI("udp://"+p[1].split("#",2)[0].trim());host=u.getHost();break;}}if(host.isEmpty())throw new IllegalArgumentException("Нет адреса сервера");}else{JSONObject settings=profile.getJSONObject("outbound").getJSONObject("settings");JSONArray servers=settings.optJSONArray("vnext");if(servers==null)servers=settings.getJSONArray("servers");JSONObject server=servers.getJSONObject(0);host=server.getString("address");port=server.getInt("port");}InetAddress address=null;for(InetAddress ip:InetAddress.getAllByName(host)){if(address==null)address=ip;if(ip instanceof Inet4Address){address=ip;break;}}if(address==null)return new Result(-1,awg?"ICMP":"TCP");long start=System.nanoTime();if(awg){if(!address.isReachable(2500))return new Result(-1,"ICMP");}else try(Socket socket=new Socket()){socket.connect(new InetSocketAddress(address,port),2500);}return new Result(Math.max(1,(System.nanoTime()-start)/1000000),awg?"ICMP":"TCP");}
+}

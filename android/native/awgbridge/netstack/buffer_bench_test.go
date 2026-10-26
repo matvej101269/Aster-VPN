@@ -1,0 +1,4 @@
+package netstack
+import("testing";"net/netip";"gvisor.dev/gvisor/pkg/buffer")
+func BenchmarkOutboundBufferReuse(b *testing.B){dev,_,err:=CreateNetTUN([]netip.Addr{netip.MustParseAddr("10.99.0.1")},nil,1280);if err!=nil{b.Fatal(err)};defer dev.Close();t:=dev.(*netTun);t.incomingPacket=make(chan *buffer.View,1);payload:=make([]byte,1200);buf:=[][]byte{make([]byte,1500)};sizes:=make([]int,1);b.ReportAllocs();b.ResetTimer();for i:=0;i<b.N;i++{t.incomingPacket<-buffer.NewViewWithData(payload);if _,err=dev.Read(buf,sizes,0);err!=nil{b.Fatal(err)}}}
+func BenchmarkInboundBufferReuse(b *testing.B){dev,_,err:=CreateNetTUN([]netip.Addr{netip.MustParseAddr("10.99.0.1")},nil,1280);if err!=nil{b.Fatal(err)};defer dev.Close();packet:=make([]byte,1200);packet[0]=0x45;buf:=[][]byte{packet};b.ReportAllocs();b.ResetTimer();for i:=0;i<b.N;i++{dev.Write(buf,0)}}

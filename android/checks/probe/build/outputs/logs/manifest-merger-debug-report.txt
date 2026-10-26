@@ -1,0 +1,41 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:1-328
+INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:1-328
+INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:1-328
+INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:1-328
+	package
+		INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml
+	android:versionName
+		INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml
+	android:versionCode
+		INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:11-69
+uses-permission#android.permission.INTERNET
+ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:70-131
+	android:name
+		ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:87-129
+application
+ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:131-317
+INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:131-317
+	android:extractNativeLibs
+		INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml
+	android:theme
+		ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:180-237
+	android:usesCleartextTraffic
+		ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:144-179
+activity#com.aster.probe.ProbeActivity
+ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:238-303
+	android:exported
+		ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:278-301
+	android:name
+		ADDED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:248-277
+uses-sdk
+INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml
+INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml

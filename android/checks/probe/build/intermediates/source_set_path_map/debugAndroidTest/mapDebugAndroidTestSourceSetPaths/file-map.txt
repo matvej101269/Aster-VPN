@@ -1,0 +1,4 @@
+com.aster.probe.test.probe-androidTest-0 C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\build\generated\res\resValues\androidTest\debug
+com.aster.probe.test.probe-mergeDebugAndroidTestResources-1 C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.aster.probe.test.probe-mergeDebugAndroidTestResources-2 C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.aster.probe.test.probe-debugAndroidTest-3 C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources

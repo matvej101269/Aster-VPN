@@ -1,0 +1,2 @@
+<resources><style name="AsterBase" parent="android:style/Theme.Material.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">#C2DF51</item><item name="android:windowLightStatusBar">false</item><item name="android:statusBarColor">#10120D</item><item name="android:navigationBarColor">#10120D</item><item name="android:windowActionModeOverlay">true</item></style><style name="AsterTheme" parent="AsterBase"/></resources>
+

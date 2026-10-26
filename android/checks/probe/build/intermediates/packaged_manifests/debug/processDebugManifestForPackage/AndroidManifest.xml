@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.aster.probe"
+    android:versionCode="1"
+    android:versionName="1" >
+
+    <uses-sdk
+        android:minSdkVersion="26"
+        android:targetSdkVersion="35" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:debuggable="true"
+        android:extractNativeLibs="false"
+        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:usesCleartextTraffic="true" >
+        <activity
+            android:name="com.aster.probe.ProbeActivity"
+            android:exported="true" />
+    </application>
+
+</manifest>

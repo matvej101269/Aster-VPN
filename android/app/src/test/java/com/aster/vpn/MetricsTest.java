@@ -1,0 +1,14 @@
+package com.aster.vpn;
+import org.json.*;
+import org.junit.Test;
+import static org.junit.Assert.*;
+public class MetricsTest {
+ @Test public void countsOnlyProxyInEachDirection(){assertArrayEquals(new long[]{4096,8192},TrafficRates.bytes("proxy,uplink,4096;proxy,downlink,8192;direct,uplink,9999;dns-out,downlink,500;block,uplink,50;"));}
+ @Test public void malformedAndNegativeCountersAreIgnored(){assertArrayEquals(new long[]{7,0},TrafficRates.bytes("broken;proxy,uplink,-1;proxy,downlink,NaN;proxy,other,9;proxy,uplink,7;"));assertArrayEquals(new long[]{0,0},TrafficRates.bytes(null));}
+ @Test public void usesActualElapsedTimeAndHandlesInvalidInterval(){assertEquals(2048,TrafficRates.perSecond(6144,3000));assertEquals(0,TrafficRates.perSecond(100,0));assertEquals(0,TrafficRates.perSecond(-1,2000));}
+ @Test public void formatsReceiveAndSendSeparately(){assertEquals("↓ 2.0 КиБ/с   ↑ 1.0 МиБ/с",TrafficRates.label(1048576,2048));assertEquals("0 Б/с",TrafficRates.format(0));}
+ @Test public void restoresTlsVerificationAndFingerprintForLegacyProfiles()throws Exception{JSONObject outbound=new JSONObject().put("streamSettings",new JSONObject().put("security","tls").put("tlsSettings",new JSONObject().put("allowInsecure",true).put("serverName","example.com")));TransportSecurity.harden(outbound);JSONObject tls=outbound.getJSONObject("streamSettings").getJSONObject("tlsSettings");assertFalse(tls.getBoolean("allowInsecure"));assertEquals("chrome",tls.getString("fingerprint"));assertEquals("example.com",tls.getString("serverName"));}
+ @Test public void keepsProviderRealitySettings()throws Exception{JSONObject settings=new JSONObject().put("publicKey","provider-key").put("shortId","1234").put("fingerprint","firefox");JSONObject outbound=new JSONObject().put("streamSettings",new JSONObject().put("security","reality").put("realitySettings",settings));TransportSecurity.harden(outbound);assertEquals("provider-key",settings.getString("publicKey"));assertEquals("1234",settings.getString("shortId"));assertEquals("firefox",settings.getString("fingerprint"));}
+ @Test public void doesNotInventSecurityForIncompatibleServer()throws Exception{JSONObject outbound=new JSONObject().put("streamSettings",new JSONObject().put("security","none"));String original=outbound.toString();TransportSecurity.harden(outbound);assertEquals(original,outbound.toString());}
+ @Test public void configEnablesCoreCountersWithoutMutatingSavedProfile()throws Exception{JSONObject profile=Profiles.parse("vless://f1f1408b-959e-4c09-bb5b-981c8ba33101@example.com:443?security=tls#Test").getJSONObject(0);String original=profile.toString();JSONObject config=new JSONObject(XraySettings.build(profile,new JSONObject()));assertTrue(config.has("stats"));JSONObject policy=config.getJSONObject("policy").getJSONObject("system");assertTrue(policy.getBoolean("statsOutboundUplink"));assertTrue(policy.getBoolean("statsOutboundDownlink"));assertEquals(original,profile.toString());}
+}

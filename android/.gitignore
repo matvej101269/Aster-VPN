@@ -1,0 +1,9 @@
+/.gradle/
+/tools/
+/upstream/
+/build/
+/app/build/
+/local.properties
+/signing/
+/app/libs/
+/app/src/main/jniLibs/

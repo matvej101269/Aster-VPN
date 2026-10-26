@@ -1,0 +1,31 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.aster.probe"
+4    android:versionCode="1"
+5    android:versionName="1" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="35" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:70-131
+11-->C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:87-129
+12
+13    <application
+13-->C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:131-317
+14        android:debuggable="true"
+15        android:extractNativeLibs="false"
+16        android:theme="@android:style/Theme.Material.NoActionBar"
+16-->C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:180-237
+17        android:usesCleartextTraffic="true" >
+17-->C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:144-179
+18        <activity
+18-->C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:238-303
+19            android:name="com.aster.probe.ProbeActivity"
+19-->C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:248-277
+20            android:exported="true" />
+20-->C:\Users\mat10\AppData\Local\Temp\aster-android-E0DBF38C6392\checks\probe\src\main\AndroidManifest.xml:1:278-301
+21    </application>
+22
+23</manifest>
