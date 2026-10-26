@@ -101,10 +101,13 @@ public partial class MainWindow : Window
     }
     private DateTimeOffset nextAppUpdate = DateTimeOffset.MaxValue;
     private bool checkingAppUpdate;
+    private async void CheckAppUpdateClick(object sender, RoutedEventArgs e) => await CheckAppUpdateAsync(true);
     private async Task CheckAppUpdateAsync(bool manual)
     {
         if (checkingAppUpdate || closing) return;
         checkingAppUpdate = true;
+        CheckAppUpdateButton.IsEnabled = false;
+        CheckAppUpdateButton.Content = "Проверка обновлений…";
         try
         {
             var update = await AppUpdater.CheckAsync();
@@ -120,7 +123,7 @@ public partial class MainWindow : Window
             RequestExit();
         }
         catch (Exception ex) { if (manual) MessageBox.Show("Не удалось обновить клиент: " + ex.Message, "Aster VPN"); else Log("Проверка обновления клиента не удалась: " + ex.Message); }
-        finally { checkingAppUpdate = false; }
+        finally { checkingAppUpdate = false; CheckAppUpdateButton.IsEnabled = true; CheckAppUpdateButton.Content = "Проверить обновления"; }
     }
     private void LoadSettings()
     {
