@@ -5,5 +5,8 @@
 /app/build/
 /local.properties
 /signing/
-/app/libs/
-/app/src/main/jniLibs/
+/app/libs/*
+!/app/libs/libv2ray.aar
+/app/src/main/jniLibs/**
+!/app/src/main/jniLibs/*/
+!/app/src/main/jniLibs/*/libasterawg.so

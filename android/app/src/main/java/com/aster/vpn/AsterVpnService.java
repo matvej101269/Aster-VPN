@@ -38,7 +38,7 @@ public final class AsterVpnService extends VpnService {
   Store store=new Store(this);JSONObject prefs=store.read(),profile=Store.connection(prefs,useLast);if(profile==null)throw new IllegalStateException("Сначала выберите сервер в Aster");
   ConnectionLog.add(this,"Запуск профиля: "+profile.optString("protocol"));serverName=profile.getString("name");profileId=profile.getString("id");Builder builder=new Builder().setSession("Aster · "+serverName).setMtu(XraySettings.MTU).setBlocking(false);
   if(Build.VERSION.SDK_INT>=29)builder.setMetered(false);
-  applyApps(builder,prefs);builder.addRoute("0.0.0.0",0);
+  applyApps(builder,prefs);for(String route:LanRoutes.tunnel(prefs.optBoolean("bypassLan",true))){String[] cidr=route.split("/");builder.addRoute(cidr[0],Integer.parseInt(cidr[1]));}
   boolean isAwg=profile.getString("protocol").equals("amneziawg");JSONObject override=null;
   builder.addAddress("172.29.0.1",30);builder.addDnsServer("1.1.1.1");builder.addDnsServer("8.8.8.8");
   if(isAwg){

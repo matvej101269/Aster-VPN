@@ -11,7 +11,7 @@ public final class XraySettings {
   JSONArray rules=new JSONArray();rules.put(field("proxy").put("inboundTag",new JSONArray().put("dns-internal")));
   rules.put(field("dns-out").put("inboundTag",new JSONArray().put("tun")).put("port","53"));
   rules.put(field("block").put("ip",new JSONArray().put("::/0")));
-  if(preferences.optBoolean("bypassLan",true))rules.put(field("direct").put("ip",new JSONArray().put("10.0.0.0/8").put("172.16.0.0/12").put("192.168.0.0/16")));
+  if(preferences.optBoolean("bypassLan",true))rules.put(field("direct").put("ip",new JSONArray(java.util.Arrays.asList(LanRoutes.LOCAL))));
   if(useSites){JSONArray domains=new JSONArray();for(int i=0;i<sites.length();i++)domains.put("domain:"+sites.getString(i));rules.put(field(siteMode==1?"proxy":"direct").put("domain",domains));}
   if(geoMode!=0&&countries.length()>0){JSONArray ips=new JSONArray();for(int i=0;i<countries.length();i++)ips.put("geoip:"+countries.getString(i));rules.put(field(geoMode==1?"proxy":"direct").put("ip",ips));}
   rules.put(field(siteMode==1||geoMode==1?"direct":"proxy").put("network","tcp,udp"));

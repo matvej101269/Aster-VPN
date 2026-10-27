@@ -3,7 +3,7 @@ Aster VPN for Android
 Xray-core and AndroidLibXrayLite v26.10.21
 https://github.com/XTLS/Xray-core
 https://github.com/2dust/AndroidLibXrayLite/tree/v26.10.21
-Xray-core: Mozilla Public License 2.0 (MPL-2.0). AndroidLibXrayLite wrapper: GNU LGPL version 3. The prebuilt unmodified libv2ray.aar is from the upstream release. The corresponding wrapper source and dependency lockfile are included with this project in android/upstream/AndroidLibXrayLite-26.10.21. You may rebuild and replace the AAR in this project's app/libs directory, then build and sign your own APK. No signature check prevents replacement in a rebuilt application.
+Xray-core: Mozilla Public License 2.0 (MPL-2.0). AndroidLibXrayLite wrapper: GNU LGPL version 3. The prebuilt unmodified libv2ray.aar is from the upstream release. The corresponding wrapper source and dependency lockfile are included with this project in third-party/AndroidLibXrayLite-26.10.21. You may rebuild and replace the AAR in this project's app/libs directory, then build and sign your own APK. No signature check prevents replacement in a rebuilt application.
 
 AmneziaWG Go v3.1.20260828 and gVisor netstack
 https://github.com/amnezia-vpn/amneziawg-go/tree/v3.1.20260828

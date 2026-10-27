@@ -1,0 +1,27 @@
+[
+  {
+    "path": "android/app/libs/libv2ray.aar",
+    "sha256": "e56ec3b06485fe7b37af26948673951edf719c50d6bbc618b8539045952adde4",
+    "bytes": 59954240
+  },
+  {
+    "path": "android/app/src/main/jniLibs/arm64-v8a/libasterawg.so",
+    "sha256": "edd56a7fb11ba90e0094a7826d719072ce8e1483cfe89464a32d618471850115",
+    "bytes": 7266888
+  },
+  {
+    "path": "android/app/src/main/jniLibs/armeabi-v7a/libasterawg.so",
+    "sha256": "96b62b9c97eab53c30e73f4459fc54e884a449bdcd73a209e5f9ab4beaa609de",
+    "bytes": 6853532
+  },
+  {
+    "path": "android/app/src/main/jniLibs/x86_64/libasterawg.so",
+    "sha256": "a1c5da3d99297f4d666d5d18e37aa1cc40880dc09ad84bae9c29a2cb19660593",
+    "bytes": 7747400
+  },
+  {
+    "path": "build-tools/inno-7.1.0.zip",
+    "sha256": "4713ae3ea6ffb24ae0be1a25f886a01960080ccc6fcfcc70bb69182c3f1b2dda",
+    "bytes": 22050884
+  }
+]
