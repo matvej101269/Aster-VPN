@@ -25,8 +25,9 @@ cd Aster-VPN
 Для Windows нужен .NET 8 SDK (`winget install Microsoft.DotNet.SDK.8`).
 JDK, Gradle, Android SDK, Go и Windows VPN-ядра ставятся скриптом из официальных
 источников с проверкой сумм. На первом запуске требуется интернет для SDK и Maven/Go/NuGet.
-Android native AWG можно пересобрать скриптом `android/native/build-awgproxy.ps1`
-после установки Android NDK r27c в `android/tools/ndk/`.
+Для пересборки Android native AWG сначала выполните
+`./scripts/setup-workspace.ps1 -AndroidOnly -Native` (добавляет Go и NDK r27c),
+затем `./android/native/build-awgproxy.ps1`.
 Для Linux/macOS Android можно собрать обычным Gradle 8.13/JDK17/SDK35;
 Windows WPF и Windows-установщик собираются на Windows.
 

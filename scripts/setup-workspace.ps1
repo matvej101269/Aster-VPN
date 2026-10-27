@@ -1,9 +1,10 @@
-param([switch]$AndroidOnly)
+param([switch]$AndroidOnly,[switch]$Native)
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 & (Join-Path $PSScriptRoot 'verify-dependencies.ps1')
 foreach($tool in (Get-Content (Join-Path $root 'build-tools/tool-downloads.json') -Raw|ConvertFrom-Json)){
- if($AndroidOnly -and $tool.name -eq 'Go'){continue}
+ if($AndroidOnly -and !$Native -and $tool.name -eq 'Go'){continue}
+ if(!$Native -and $tool.name -eq 'NDK'){continue}
  if(Test-Path -LiteralPath (Join-Path $root $tool.probe)){continue}
  $archive=Join-Path $root $tool.archive;$destination=Join-Path $root $tool.destination
  New-Item -ItemType Directory -Force $destination,(Split-Path $archive -Parent)|Out-Null

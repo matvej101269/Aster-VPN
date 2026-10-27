@@ -30,5 +30,13 @@
     "archive": "vendor/go.zip",
     "name": "Go",
     "destination": "vendor"
+  },
+  {
+    "probe": "android/tools/ndk/android-ndk-r27c/toolchains/llvm/prebuilt/windows-x86_64/bin/clang.exe",
+    "url": "https://dl.google.com/android/repository/android-ndk-r27c-windows.zip",
+    "destination": "android/tools/ndk",
+    "archive": "android/tools/ndk.zip",
+    "sha256": "27e49f11e0cee5800983d8af8f4acd5bf09987aa6f790d4439dda9f3643d2494",
+    "name": "NDK"
   }
 ]

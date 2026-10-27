@@ -13,7 +13,7 @@ Android — «Настройки → Проверить обновления».
 Публикуйте файлы с точными именами:
 
 - Windows: `AsterVPN-Setup-1.0.7-x64.exe` (версия из `src/AsterVPN.csproj`).
-- Android: `AsterVPN-1.0.17-android.apk` (versionName из `android/app/build.gradle`).
+- Android: `AsterVPN-1.0.19-android.apk` (versionName из `android/app/build.gradle`).
 
 Версии платформ независимы; можно прикладывать один или оба установщика.
 Клиенты выбирают максимальную версию своей платформы из последних 100 релизов,
