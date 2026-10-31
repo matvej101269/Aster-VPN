@@ -1,0 +1,70 @@
+package main
+
+import (
+	"github.com/amnezia-vpn/amneziawg-go/v3/tun"
+	"os"
+	"sync/atomic"
+	"testing"
+	"time"
+)
+
+type fakeTUN struct {
+	reads  atomic.Int32
+	closed atomic.Bool
+}
+
+func (f *fakeTUN) File() *os.File { return nil }
+func (f *fakeTUN) Read(b [][]byte, s []int, o int) (int, error) {
+	f.reads.Add(1)
+	if f.closed.Load() {
+		return 0, os.ErrClosed
+	}
+	b[0][o] = 42
+	s[0] = 1
+	return 1, nil
+}
+func (f *fakeTUN) Write([][]byte, int) (int, error) { return 0, nil }
+func (f *fakeTUN) MTU() (int, error)                { return 1280, nil }
+func (f *fakeTUN) Name() (string, error)            { return "test", nil }
+func (f *fakeTUN) Events() <-chan tun.Event         { return nil }
+func (f *fakeTUN) Close() error                     { f.closed.Store(true); return nil }
+func (f *fakeTUN) BatchSize() int                   { return 1 }
+func TestConfigurationGateDoesNotConsumeFirstPacket(t *testing.T) {
+	inner := &fakeTUN{}
+	gate := configureTUN(inner)
+	done := make(chan int, 1)
+	b := [][]byte{make([]byte, 64)}
+	sizes := make([]int, 1)
+	go func() { n, _ := gate.Read(b, sizes, 0); done <- n }()
+	select {
+	case <-done:
+		t.Fatal("reader ran before configuration")
+	case <-time.After(20 * time.Millisecond):
+	}
+	gate.release()
+	gate.release()
+	select {
+	case n := <-done:
+		if n != 0 || inner.reads.Load() != 0 {
+			t.Fatal("first read must only reload S4")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("reader blocked")
+	}
+	n, err := gate.Read(b, sizes, 16)
+	if err != nil || n != 1 || b[0][16] != 42 {
+		t.Fatal("payload was lost after padding reload")
+	}
+}
+func TestCloseBeforeConfigurationUnblocksReader(t *testing.T) {
+	inner := &fakeTUN{}
+	gate := configureTUN(inner)
+	done := make(chan bool, 1)
+	go func() { gate.Read(nil, nil, 0); done <- true }()
+	gate.Close()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("close leaked a blocked reader")
+	}
+}

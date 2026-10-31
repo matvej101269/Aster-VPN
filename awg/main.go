@@ -18,9 +18,9 @@ import (
 	"os/signal"
 	"time"
 
+	"astervpn/awg/netstack"
 	"github.com/amnezia-vpn/amneziawg-go/v3/conn"
 	"github.com/amnezia-vpn/amneziawg-go/v3/device"
-	"github.com/amnezia-vpn/amneziawg-go/v3/tun/netstack"
 )
 
 type Config struct {
@@ -79,7 +79,8 @@ func run(path string, check bool) error {
 	}
 	// WinRingBind (Windows RIO) stalled streams in repeated 320-client tests.
 	// StdNetBind keeps the official protocol core and uses buffered UDP sockets.
-	dev := device.NewDevice(tun, conn.NewStdNetBind(), device.NewLogger(device.LogLevelSilent, ""))
+	gated := configureTUN(tun)
+	dev := device.NewDevice(gated, conn.NewStdNetBind(), device.NewLogger(device.LogLevelSilent, ""))
 	defer dev.Close()
 	// UAPI endpoint must be an IP:port, resolved by the controller before TUN startup.
 	if err := dev.IpcSet(cfg.UAPI); err != nil {
@@ -92,6 +93,7 @@ func run(path string, check bool) error {
 	if err := dev.Up(); err != nil {
 		return errors.New("AWG: device startup failed")
 	}
+	gated.release()
 	listener, err := net.Listen("tcp4", fmt.Sprintf("127.0.0.1:%d", cfg.Port))
 	if err != nil {
 		return errors.New("AWG: loopback port unavailable")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"astervpn/awg/netstack"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -8,7 +9,6 @@ import (
 	"fmt"
 	"github.com/amnezia-vpn/amneziawg-go/v3/conn"
 	"github.com/amnezia-vpn/amneziawg-go/v3/device"
-	"github.com/amnezia-vpn/amneziawg-go/v3/tun/netstack"
 	"golang.org/x/crypto/curve25519"
 	"io"
 	"net"
@@ -41,15 +41,17 @@ func pair(t *testing.T) (*netstack.Net, *netstack.Net) {
 			t.Fatal(e)
 		}
 		stacks[i] = stack
-		dev := device.NewDevice(tun, conn.NewStdNetBind(), device.NewLogger(device.LogLevelSilent, ""))
+		gated := configureTUN(tun)
+		dev := device.NewDevice(gated, conn.NewStdNetBind(), device.NewLogger(device.LogLevelSilent, ""))
 		t.Cleanup(dev.Close)
-		config := fmt.Sprintf("private_key=%s\nlisten_port=%d\njc=2\njmin=20\njmax=40\ns1=16\ns2=32\nh1=101\nh2=102\nh3=103\nh4=104\nreplace_peers=true\npublic_key=%s\nendpoint=127.0.0.1:%d\nallowed_ip=10.90.0.%d/32\n", hex.EncodeToString(keys[i]), ports[i], hex.EncodeToString(pubs[1-i]), ports[1-i], 2-i)
+		config := fmt.Sprintf("private_key=%s\nlisten_port=%d\njc=2\njmin=20\njmax=40\ns1=16\ns2=32\ns4=32\nh1=101\nh2=102\nh3=103\nh4=104\nreplace_peers=true\npublic_key=%s\nendpoint=127.0.0.1:%d\nallowed_ip=10.90.0.%d/32\n", hex.EncodeToString(keys[i]), ports[i], hex.EncodeToString(pubs[1-i]), ports[1-i], 2-i)
 		if e = dev.IpcSet(config); e != nil {
 			t.Fatal(e)
 		}
 		if e = dev.Up(); e != nil {
 			t.Fatal(e)
 		}
+		gated.release()
 	}
 	return stacks[0], stacks[1]
 }

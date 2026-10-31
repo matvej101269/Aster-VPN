@@ -25,6 +25,10 @@ func relayUDP(client net.Conn, control io.Reader, stack *netstack.Net) {
 // Each destination owns a bounded queue and worker. Slow DNS/dials/writes must
 // never stop the association from receiving packets for other destinations.
 func relayUDPWithDial(client net.Conn, control io.Reader, dial udpDial) {
+	relayUDPWithIdle(client, control, dial, 2*time.Minute)
+}
+
+func relayUDPWithIdle(client net.Conn, control io.Reader, dial udpDial, idle time.Duration) {
 	relay, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
 	if err != nil {
 		return
@@ -50,7 +54,7 @@ func relayUDPWithDial(client net.Conn, control io.Reader, dial udpDial) {
 	var source *net.UDPAddr
 	buf := make([]byte, 65535)
 	for {
-		relay.SetReadDeadline(time.Now().Add(3 * time.Minute))
+		// The authenticated TCP control connection owns the association lifetime.
 		n, from, err := relay.ReadFromUDP(buf)
 		if err != nil {
 			return
@@ -109,7 +113,7 @@ func relayUDPWithDial(client net.Conn, control io.Reader, dial udpDial) {
 					offset := 3 + len(f.header)
 					copy(packet[3:], f.header)
 					for {
-						upstream.SetReadDeadline(time.Now().Add(2 * time.Minute))
+						upstream.SetReadDeadline(time.Now().Add(idle))
 						n, err := upstream.Read(packet[offset:])
 						if err != nil {
 							return
@@ -125,6 +129,8 @@ func relayUDPWithDial(client net.Conn, control io.Reader, dial udpDial) {
 					case <-flowCtx.Done():
 						return
 					case p := <-f.packets:
+						// Outgoing traffic also keeps a one-way UDP flow alive.
+						upstream.SetReadDeadline(time.Now().Add(idle))
 						upstream.SetWriteDeadline(time.Now().Add(time.Second))
 						_, err := upstream.Write(p)
 						mu.Lock()

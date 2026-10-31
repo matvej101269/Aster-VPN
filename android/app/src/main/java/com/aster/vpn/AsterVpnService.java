@@ -17,8 +17,19 @@ public final class AsterVpnService extends VpnService {
  private ParcelFileDescriptor tun;private CoreController core;private AwgBridgeClient awg;
  private volatile boolean stopRequested;private volatile int latestStartId;private volatile boolean stopping;
  private static final int NOTIFICATION=1;
+ private volatile boolean awgWanted;private ScheduledFuture<?> recoveryTask;private int recoveryAttempts,awgGeneration;
+ private final ConnectivityManager.NetworkCallback networkCallback=new ConnectivityManager.NetworkCallback(){
+  @Override public void onAvailable(Network network){networkChanged();}
+  @Override public void onLost(Network network){networkChanged();}
+ };
+ private void networkChanged(){if(!worker.isShutdown())try{worker.execute(()->{if(awgWanted&&!stopRequested)scheduleAwgRecovery(1500);});}catch(RejectedExecutionException ignored){}}
+ private void scheduleAwgRecovery(long delay){
+  if(stopRequested||!awgWanted||worker.isShutdown())return;
+  if(recoveryTask!=null&&!recoveryTask.isDone())return;
+  recoveryTask=worker.schedule(()->{recoveryTask=null;if(stopRequested||!awgWanted)return;close();connecting=true;report("\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 AWG...");try{connect(true);recoveryAttempts=0;}catch(Exception e){close();report("AWG: \u043e\u0436\u0438\u0434\u0430\u043d\u0438\u0435 \u0441\u0435\u0442\u0438 - "+safeMessage(e));scheduleAwgRecovery(Math.min(60000,2000L<<Math.min(recoveryAttempts++,5)));}finally{connecting=false;}},delay,TimeUnit.MILLISECONDS);
+ }
  public static void command(Context c,String action){Intent intent=new Intent(c,AsterVpnService.class).setAction(action);c.startForegroundService(intent);}
- @Override public void onCreate(){super.onCreate();getSystemService(NotificationManager.class).createNotificationChannel(new NotificationChannel("vpn","VPN-соединение",NotificationManager.IMPORTANCE_LOW));}
+ @Override public void onCreate(){super.onCreate();getSystemService(NotificationManager.class).createNotificationChannel(new NotificationChannel("vpn","VPN-соединение",NotificationManager.IMPORTANCE_LOW));getSystemService(ConnectivityManager.class).registerNetworkCallback(new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(),networkCallback);}
  private Notification notification(){
   PendingIntent open=PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   PendingIntent stop=PendingIntent.getService(this,1,new Intent(this,AsterVpnService.class).setAction(STOP),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
@@ -27,10 +38,10 @@ public final class AsterVpnService extends VpnService {
  private void report(String message){state=message;ConnectionLog.add(this,message);getSystemService(NotificationManager.class).notify(NOTIFICATION,notification());AsterTileService.refresh(this);sendBroadcast(new Intent("com.aster.vpn.STATE").setPackage(getPackageName()));}
  @Override public int onStartCommand(Intent intent,int flags,int startId){
   startForeground(NOTIFICATION,notification());String action=intent==null?LAST:intent.getAction();
-  if(STOP.equals(action)){ConnectionLog.add(this,"Запрошено отключение VPN");latestStartId=startId;stopRequested=true;stopping=true;worker.execute(()->{close();finishService(startId);});return START_NOT_STICKY;}
+  if(STOP.equals(action)){ConnectionLog.add(this,"Запрошено отключение VPN");latestStartId=startId;stopRequested=true;awgWanted=false;stopping=true;worker.execute(()->{close();finishService(startId);});return START_NOT_STICKY;}
   if(!stopping&&(connecting||active&&!SWITCH.equals(action)))return START_STICKY;
   latestStartId=startId;connecting=true;report("Подключение…");
-  worker.execute(()->{if(latestStartId!=startId)return;stopRequested=false;stopping=false;try{if(SWITCH.equals(action))close();connecting=true;connect(!START.equals(action)&&!SWITCH.equals(action));}catch(Exception e){close();state="Ошибка: "+safeMessage(e);finishService(startId);}finally{connecting=false;AsterTileService.refresh(this);}});
+  worker.execute(()->{if(latestStartId!=startId)return;stopRequested=false;stopping=false;try{awgWanted=false;if(SWITCH.equals(action))close();connecting=true;connect(!START.equals(action)&&!SWITCH.equals(action));}catch(Exception e){close();state="Ошибка: "+safeMessage(e);finishService(startId);}finally{connecting=false;AsterTileService.refresh(this);}});
   return START_STICKY;
  }
  private void connect(boolean useLast)throws Exception{
@@ -45,7 +56,7 @@ public final class AsterVpnService extends VpnService {
    AwgConfig config=AwgConfig.parse(profile.getString("config"));JSONArray addresses=new JSONArray(),dns=new JSONArray();boolean ipv4=false;
    for(String cidr:config.addresses){String address=cidr.split("/")[0];addresses.put(address);if(!address.contains(":"))ipv4=true;}if(!ipv4)throw new IllegalArgumentException("AWG требует IPv4 адрес");for(String address:config.dns)dns.put(address);
    String password=java.util.UUID.randomUUID().toString()+java.util.UUID.randomUUID();
-   awg=new AwgBridgeClient(this,new JSONObject().put("addresses",addresses).put("dns",dns).put("mtu",Math.min(config.mtu,XraySettings.MTU)).put("uapi",config.uapi).put("debug",BuildConfig.DEBUG).put("password",password).toString(),()->{if(!worker.isShutdown())worker.execute(()->{close();state="Ошибка: процесс AWG остановился";finishService();});});int port=awg.start();
+   int generation=++awgGeneration;awg=new AwgBridgeClient(this,new JSONObject().put("addresses",addresses).put("dns",dns).put("mtu",Math.min(config.mtu,XraySettings.MTU)).put("uapi",config.uapi).put("debug",BuildConfig.DEBUG).put("password",password).toString(),()->{if(!worker.isShutdown())worker.execute(()->{if(generation==awgGeneration&&awgWanted&&!stopRequested)scheduleAwgRecovery(1500);});});int port=awg.start();
    if(port<0)throw new IllegalStateException("Не удалось запустить AWG ("+port+")");
    override=XraySettings.awgOutbound(port,password);
   }
@@ -58,7 +69,7 @@ public final class AsterVpnService extends VpnService {
   core=Libv2ray.newCoreController(new CoreCallbackHandler(){public long startup(){return 0;}public long shutdown(){return 0;}public long onEmitStatus(long code,String message){ConnectionLog.add(AsterVpnService.this,"Событие ядра Xray: "+code);return 0;}});
   core.startLoop(XraySettings.build(profile,prefs,override),tun.getFd());
   if(!core.getIsRunning())throw new IllegalStateException("Xray не запустился");
-  if(stopRequested){close();return;}active=true;connecting=false;store.change(data->data.put("lastConnection",profile));report("VPN включён");trafficAt=SystemClock.elapsedRealtime();trafficText=TrafficRates.label(0,0);trafficTask=worker.scheduleWithFixedDelay(this::sampleTraffic,2,2,TimeUnit.SECONDS);
+  if(stopRequested){close();return;}active=true;awgWanted=isAwg;connecting=false;store.change(data->data.put("lastConnection",profile));report("VPN включён");trafficAt=SystemClock.elapsedRealtime();trafficText=TrafficRates.label(0,0);trafficTask=worker.scheduleWithFixedDelay(this::sampleTraffic,2,2,TimeUnit.SECONDS);
  }
  private void applyApps(Builder b,JSONObject data)throws Exception{
   int mode=data.optInt("mode");JSONArray apps=data.optJSONArray("apps");
@@ -66,10 +77,10 @@ public final class AsterVpnService extends VpnService {
   else{b.addDisallowedApplication(getPackageName());if(mode==2&&apps!=null)for(int i=0;i<apps.length();i++)try{b.addDisallowedApplication(apps.getString(i));}catch(android.content.pm.PackageManager.NameNotFoundException ignored){}}
  }
  private void sampleTraffic(){if(!active||core==null||!core.getIsRunning())return;try{long now=SystemClock.elapsedRealtime();long[] bytes=TrafficRates.bytes(core.queryAllOutboundTrafficStats());String next=TrafficRates.label(TrafficRates.perSecond(bytes[0],now-trafficAt),TrafficRates.perSecond(bytes[1],now-trafficAt));trafficAt=now;if(!next.equals(trafficText)){trafficText=next;getSystemService(NotificationManager.class).notify(NOTIFICATION,notification());}}catch(Exception ignored){}}
- private void close(){if(trafficTask!=null){trafficTask.cancel(false);trafficTask=null;}trafficText=TrafficRates.label(0,0);active=false;connecting=false;if(core!=null){try{core.stopLoop();}catch(Exception ignored){}core=null;}if(awg!=null){awg.close();awg=null;}if(tun!=null){try{tun.close();}catch(Exception ignored){}tun=null;}}
+ private void close(){if(recoveryTask!=null){recoveryTask.cancel(false);recoveryTask=null;}awgGeneration++;if(trafficTask!=null){trafficTask.cancel(false);trafficTask=null;}trafficText=TrafficRates.label(0,0);active=false;connecting=false;if(core!=null){try{core.stopLoop();}catch(Exception ignored){}core=null;}if(awg!=null){awg.close();awg=null;}if(tun!=null){try{tun.close();}catch(Exception ignored){}tun=null;}}
  private void finishService(){finishService(latestStartId);}
  private void finishService(int expected){new Handler(Looper.getMainLooper()).post(()->{if(expected!=latestStartId)return;if(stopRequested)state="Отключено";ConnectionLog.add(this,state);stopForeground(STOP_FOREGROUND_REMOVE);AsterTileService.refresh(this);sendBroadcast(new Intent("com.aster.vpn.STATE").setPackage(getPackageName()));stopSelf();});}
  @Override public void onRevoke(){ConnectionLog.add(this,"Android отозвал разрешение VPN");stopRequested=true;worker.execute(()->{close();finishService();});super.onRevoke();}
- @Override public void onDestroy(){stopRequested=true;worker.execute(()->{close();if(!state.startsWith("Ошибка:"))state="Отключено";AsterTileService.refresh(this);});worker.shutdown();super.onDestroy();}
+ @Override public void onDestroy(){stopRequested=true;awgWanted=false;getSystemService(ConnectivityManager.class).unregisterNetworkCallback(networkCallback);worker.execute(()->{close();if(!state.startsWith("Ошибка:"))state="Отключено";AsterTileService.refresh(this);});worker.shutdown();super.onDestroy();}
  static String safeMessage(Exception e){if(e instanceof IllegalStateException||e instanceof IllegalArgumentException)return e.getMessage()==null?"Неверная конфигурация":e.getMessage();String detail=String.valueOf(e.getMessage()).toLowerCase(java.util.Locale.ROOT);if(detail.contains("xudp")||detail.contains("base key"))return "Ошибка ключа инициализации Xray (XUDP)";if(detail.contains("config")||detail.contains("failed to build"))return "Xray отклонил настройки сервера. Обновите подписку.";if(detail.contains("certificate")||detail.contains("tls")||detail.contains("reality"))return "Не удалось установить защищённое соединение с сервером";if(detail.contains("permission")||detail.contains("bad file descriptor"))return "Android отклонил сетевой интерфейс VPN";if(e instanceof java.net.UnknownHostException)return "Не удалось найти адрес сервера. Проверьте сеть.";if(e instanceof java.net.SocketTimeoutException)return "Сервер не ответил вовремя";return "Не удалось запустить VPN ("+e.getClass().getSimpleName()+"). Обновите подписку и повторите подключение.";}
 }

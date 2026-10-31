@@ -5,7 +5,7 @@ if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
 android {
     namespace 'com.aster.vpn'
     compileSdk 35
-    defaultConfig { applicationId 'com.aster.vpn'; minSdk 26; targetSdk 35; versionCode 10020; versionName '1.0.20'; ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' } }
+    defaultConfig { applicationId 'com.aster.vpn'; minSdk 26; targetSdk 35; versionCode 10021; versionName '1.0.21'; ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' } }
     buildFeatures { buildConfig true }
     defaultConfig { testInstrumentationRunner 'com.aster.vpn.NativeChecks' }
     signingConfigs { release { if (signingFile.exists()) { storeFile rootProject.file('signing/aster-release.p12'); storePassword signing['storePassword']; keyAlias signing['keyAlias']; keyPassword signing['storePassword'] } } }

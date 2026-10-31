@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -77,5 +78,63 @@ func TestUDPBlockedDestinationDoesNotStallOthers(t *testing.T) {
 	case <-relayDone:
 	case <-time.After(time.Second):
 		t.Fatal("relay workers did not terminate")
+	}
+}
+
+// A telemetry/voice sender can remain active without receiving any reply.
+// Its upstream socket must survive for longer than the receive idle timeout.
+func TestUDPOutgoingTrafficKeepsFlowAlive(t *testing.T) {
+	client, server := net.Pipe()
+	defer client.Close()
+	defer server.Close()
+	var dials atomic.Int32
+	received := make(chan struct{}, 32)
+	dial := func(ctx context.Context, network, target string) (net.Conn, error) {
+		dials.Add(1)
+		a, b := net.Pipe()
+		go func() {
+			defer b.Close()
+			buf := make([]byte, 64)
+			for {
+				if _, err := b.Read(buf); err != nil {
+					return
+				}
+				received <- struct{}{}
+			}
+		}()
+		return a, nil
+	}
+	done := make(chan struct{})
+	go func() { relayUDPWithIdle(server, server, dial, 200*time.Millisecond); close(done) }()
+	client.SetReadDeadline(time.Now().Add(time.Second))
+	var reply [10]byte
+	if _, err := io.ReadFull(client, reply[:]); err != nil {
+		t.Fatal(err)
+	}
+	socket, err := net.DialUDP("udp4", nil, &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: int(reply[8])<<8 | int(reply[9])})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer socket.Close()
+	packet := []byte{0, 0, 0, 1, 10, 0, 0, 1, 35, 40, 42}
+	for i := 0; i < 12; i++ {
+		if _, err = socket.Write(packet); err != nil {
+			t.Fatal(err)
+		}
+		select {
+		case <-received:
+		case <-time.After(time.Second):
+			t.Fatal("outgoing datagram lost")
+		}
+		time.Sleep(40 * time.Millisecond)
+	}
+	if dials.Load() != 1 {
+		t.Fatalf("active one-way flow reopened %d times", dials.Load())
+	}
+	client.Close()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("control close did not stop association")
 	}
 }

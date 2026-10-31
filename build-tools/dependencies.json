@@ -6,18 +6,18 @@
   },
   {
     "path": "android/app/src/main/jniLibs/arm64-v8a/libasterawg.so",
-    "sha256": "edd56a7fb11ba90e0094a7826d719072ce8e1483cfe89464a32d618471850115",
-    "bytes": 7266888
+    "sha256": "b7784c724d02e4df5977b7e064827e88f9a2674a5d39c8b344611fc45b2dc841",
+    "bytes": 7267176
   },
   {
     "path": "android/app/src/main/jniLibs/armeabi-v7a/libasterawg.so",
-    "sha256": "96b62b9c97eab53c30e73f4459fc54e884a449bdcd73a209e5f9ab4beaa609de",
-    "bytes": 6853532
+    "sha256": "a1e8da998bf404e3bc4b9b2e0ef829dbb9dc8591aa6e4e63fdf72169c42bee5f",
+    "bytes": 6853756
   },
   {
     "path": "android/app/src/main/jniLibs/x86_64/libasterawg.so",
-    "sha256": "a1c5da3d99297f4d666d5d18e37aa1cc40880dc09ad84bae9c29a2cb19660593",
-    "bytes": 7747400
+    "sha256": "31764a03cfa1f8b54564c372d1aa4c9dfc5543a8d2e8586ac34e279fc561b9c8",
+    "bytes": 7747784
   },
   {
     "path": "build-tools/inno-7.1.0.zip",
