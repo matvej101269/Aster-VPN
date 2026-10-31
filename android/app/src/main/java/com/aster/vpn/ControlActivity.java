@@ -7,7 +7,7 @@ import android.net.VpnService;
 import android.os.*;
 import android.widget.Toast;
 
-/** Result-based launcher interface. Caller identity comes exclusively from Android. */
+/** Android-authenticated callers, or explicit local consent for ordinary Activity launches. */
 public final class ControlActivity extends Activity {
  private final Handler handler=new Handler(Looper.getMainLooper());
  private String caller,command,operation;
@@ -22,8 +22,8 @@ public final class ControlActivity extends Activity {
  }};
  @Override public void onCreate(Bundle saved){super.onCreate(saved);
   caller=getCallingPackage();ComponentName activity=getCallingActivity();
+  if(caller!=null&&!caller.isEmpty()&&activity!=null&&!caller.equals(activity.getPackageName())){complete(false,"unknown_caller","Данные Android о вызывающем приложении не совпадают");return;}
   caller=LauncherCaller.resolve(caller,activity==null?null:activity.getPackageName());
-  if(caller==null||caller.isEmpty()||(activity!=null&&!caller.equals(activity.getPackageName()))){complete(false,"unknown_caller","Android не подтвердил вызывающее приложение. Используйте startActivityForResult без NEW_TASK.");return;}
   command=LauncherCommand.parse(getIntent().getAction(),getIntent().getDataString());
   if(command.isEmpty()){complete(false,"invalid_command","Неизвестная команда лаунчера");return;}
   if(saved!=null){waitingConsent=saved.getBoolean("consent");waitingState=saved.getBoolean("waiting");dispatched=saved.getBoolean("dispatched");operation=saved.getString("operation");deadline=saved.getLong("deadline");if(waitingState){handler.post(poll);return;}if(waitingConsent)return;}
@@ -31,6 +31,12 @@ public final class ControlActivity extends Activity {
  }
  private void authorize(){try{
   org.json.JSONObject data=new Store(this).read();
+  String supplied=ButtonControlToken.fromLink(getIntent().getDataString());
+  if(supplied!=null){
+   if(!data.optBoolean("externalControl",false)||!ButtonControlToken.matches(getSharedPreferences("button-control",MODE_PRIVATE).getString("token",null),supplied)){complete(false,"invalid_token","Личная ссылка кнопки неверна или отозвана. Создайте новую в настройках Aster.");return;}
+   ConnectionLog.add(this,"Кнопка пульта: доступ по личной ссылке подтверждён");execute();return;
+  }
+  if(caller==null){confirmSingleCommand();return;}
   if(data.optBoolean("externalControl",false)&&getSharedPreferences("launcher-grants",MODE_PRIVATE).getBoolean(caller,false)){execute();return;}
   new AlertDialog.Builder(this).setTitle("Управление VPN из лаунчера")
    .setMessage("Разрешить приложению "+caller+" подключать и отключать VPN? Команды используют последний выбранный сервер.")
@@ -38,6 +44,15 @@ public final class ControlActivity extends Activity {
    .setNegativeButton("Отказать",(dialog,which)->complete(false,"denied","Пользователь запретил управление VPN"))
    .setOnCancelListener(dialog->complete(false,"denied","Подтверждение управления отменено")).show();
  }catch(Exception e){fail(e);}}
+ private void confirmSingleCommand(){
+  String label=command.equals("connect")?"Подключить VPN":command.equals("disconnect")?"Отключить VPN":command.equals("toggle")?"Переключить VPN":"Показать состояние VPN";
+  ConnectionLog.add(this,"Обычный запуск Activity: Android не сообщил caller; ожидается разовое подтверждение команды "+command);
+  new AlertDialog.Builder(this).setTitle(label+"?")
+   .setMessage("Android не сообщил, какое приложение отправило запрос. Разрешить только эту команду? Для Button Mapper без повторных подтверждений создайте личную ссылку в настройках Aster → Кнопка пульта.")
+   .setPositiveButton("Выполнить",(dialog,which)->execute())
+   .setNegativeButton("Отмена",(dialog,which)->complete(false,"denied","Разовая команда не разрешена"))
+   .setOnCancelListener(dialog->complete(false,"denied","Подтверждение команды отменено")).show();
+ }
  private void execute(){try{
   operation=LauncherCommand.operation(command,AsterVpnService.active||AsterVpnService.connecting);
   if(operation.equals("status")){complete(true,"status","Состояние VPN получено");return;}
