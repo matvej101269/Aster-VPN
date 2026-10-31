@@ -13,9 +13,9 @@ Android — «Настройки → Проверить обновления».
 Публикуйте файлы с точными именами:
 
 - Windows: `AsterVPN-Setup-1.0.7-x64.exe` (версия из `src/AsterVPN.csproj`).
-- Android: `AsterVPN-1.0.19-android.apk` (versionName из `android/app/build.gradle`).
+- Android: `AsterVPN-1.0.20-android.apk` (versionName из `android/app/build.gradle`).
 
-Версии платформ независимы; можно прикладывать один или оба установщика.
+Версии платформ независимы; публикуйте отдельные релизы Android и Windows с установщиком только своей платформы.
 Клиенты выбирают максимальную версию своей платформы из последних 100 релизов,
 пропускают draft/prerelease и файлы без SHA-256 digest GitHub.
 Исходники в Git сами по себе не являются обновлением: нужны вложения Releases.

@@ -78,3 +78,33 @@ Windows Version: `src/AsterVPN.csproj`. Повышать только измен
 Manager/credential helper. GitHub-токены и учётные данные не хранятся в репозитории.
 При очистке сохраняются исходные EXE/APK, их контрольные суммы и Git-история;
 установщики не пересобираются и не переподписываются.
+
+## Android 1.0.20: обновление и управление из лаунчера
+
+Установить APK поверх прежнего `com.aster.vpn`, без удаления приложения: настройки
+сохраняются. Используется прежний release keystore; перед сборкой проверить его
+через `android-signing.ps1 -Mode Verify` с локальным recovery key владельца.
+Новый сертификат не создавать. Windows в этом выпуске не изменён.
+
+Лаунчер вызывает `com.aster.vpn.ControlActivity` через `startActivityForResult`
+с действием `com.aster.vpn.action.CONNECT` или `com.aster.vpn.action.DISCONNECT`.
+Не добавлять NEW_TASK, NEW_DOCUMENT и другие флаги, разрывающие получение результата.
+Пакет вызывающего приложения берётся только из `getCallingPackage()` Android;
+резервный вариант для TV — пакет `getCallingActivity()`. Extras и referrer
+не используются как удостоверение. Вызовы без удостоверенного caller отклоняются.
+Внешние broadcast-команды закрыты, чтобы не обходить подтверждение Activity.
+
+Первый запрос показывает подтверждение для конкретного пакета лаунчера. При CONNECT
+Aster сам запрашивает `VpnService.prepare()`, если Android ещё не разрешил VPN.
+Выключение «Управление из лаунчера» отзывает сохранённые разрешения пакетов.
+CONNECT при подключении ждёт его завершения, при включённом VPN ничего не меняет;
+DISCONNECT отменяет подключение или отключает VPN, повторное отключение успешно.
+
+Результат: `RESULT_OK` для завершённой команды/STATUS, `RESULT_CANCELED` для отказа,
+ошибки или тайм-аута 60 секунд. Extras: `command`, `result`, `message`, `active`,
+`connecting`, `state`. Коды результата: `completed`, `already_connected`,
+`already_disconnected`, `status`, `unknown_caller`, `invalid_command`, `denied`,
+`vpn_denied`, `no_profile`, `timeout`, `cancelled`, `error`.
+Тайм-аут или закрытие ожидания не отменяют уже отправленную команду; следует
+проверить состояние в Aster. Отказы, ожидание разрешения и итог пишутся в журнал Aster.
+Проверка на физическом телевизоре для этого изменения не выполнялась.
